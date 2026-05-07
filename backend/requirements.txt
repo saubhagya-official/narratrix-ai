@@ -1,11 +1,29 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-dotenv
+
 redis
 pymilvus
+
 sqlalchemy
 psycopg2-binary
-passlib[bcrypt]
-python-jose
 motor
+
+passlib[bcrypt]
+python-jose[cryptography]
 pydantic[email]
+
+# AI / Embeddings / LLM
+torch
+transformers>=4.51.0
+accelerate
+sentencepiece
+sentence-transformers
+
+# PDF processing
+pypdf
+
+# Utilities
+numpy
+scipy
+python-multipart

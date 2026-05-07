@@ -1,48 +1,31 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
+from huggingface_hub import InferenceClient
+import os
+
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
-    torch_dtype=torch.float16,
-    device_map="auto"
-)
-model.eval()
+client = InferenceClient(provider="hf-inference", api_key=HF_TOKEN)
+
+print("🌐 Using Hugging Face Inference API for LLM")
+
 
 def generate_answer(context: str, query: str) -> str:
     messages = [
         {
             "role": "system",
             "content": (
-                "You are a helpful assistant. Answer questions using ONLY the provided context. "
-                "Be concise. If the answer is not in the context, say: Not found in document."
-            )
+                "You are a helpful assistant. "
+                "Answer questions using ONLY the provided context. "
+                "Be concise. "
+                "If the answer is not in the context, say: Not found in document."
+            ),
         },
-        {
-            "role": "user",
-            "content": f"Context:\n{context}\n\nQuestion: {query}"
-        }
+        {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"},
     ]
 
-    prompt = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True
+    completion = client.chat.completions.create(
+        model=MODEL_NAME, messages=messages, max_tokens=200, temperature=0.3
     )
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=200,
-            temperature=0.3,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    # Decode only the newly generated tokens, not the prompt
-    new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
-    return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+    return completion.choices[0].message.content.strip()
